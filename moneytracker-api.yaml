@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: MoneyTracker API
+  version: 1.0.0
+  description: Authentication and dashboard APIs for MoneyTracker
+
+servers:
+  - description: SwaggerHub/API Auto Mocking
+    url: https://virtserver.swaggerhub.com/amilawedikkara-87d/moneytracker-auth/1.0.0
+
+paths:
+  /auth/register:
+    post:
+      operationId: userRegister
+      summary: User register
+      tags:
+        - Authentication
+      description: Create user account and profile with name, email, password, country, and preferred currency.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /auth/login:
+    post:
+      operationId: loginToAccount
+      summary: Login to account
+      tags:
+        - Authentication
+      description: Login with email and password and return a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      summary: Get financial dashboard overview
+      tags:
+        - Dashboard
+      description: Returns the user's financial summary including total balance, income, expenses, monthly budget status, and the currency for formatting values on the dashboard.
+      security:
+        - BearerJwt: []
+      responses:
+        "200":
+          description: Dashboard data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummaryResponse"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    BearerJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Pooja
+        email:
+          type: string
+          format: email
+          example: pooja@example.com
+        password:
+          type: string
+          format: password
+          example: StrongPassword123
+        country:
+          type: string
+          example: Finland
+        preferredCurrency:
+          type: string
+          example: EUR
+      required:
+        - name
+        - email
+        - password
+        - country
+        - preferredCurrency
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: pooja@example.com
+        password:
+          type: string
+          format: password
+          example: StrongPassword123
+      required:
+        - email
+        - password
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresIn:
+          type: integer
+          example: 3600
+        message:
+          type: string
+          example: Authentication successful
+      required:
+        - token
+        - expiresIn
+        - message
+
+    DashboardSummaryResponse:
+      type: object
+      properties:
+        userName:
+          type: string
+          example: Pooja
+        currency:
+          type: string
+          example: EUR
+        period:
+          type: string
+          example: 2026-03
+          description: Reporting period in YYYY-MM format
+        summary:
+          type: object
+          properties:
+            totalBalance:
+              type: number
+              format: double
+              example: 1800
+            income:
+              type: number
+              format: double
+              example: 5000
+            expenses:
+              type: number
+              format: double
+              example: 3200
+          required:
+            - totalBalance
+            - income
+            - expenses
+        monthlyBudget:
+          type: object
+          properties:
+            spent:
+              type: number
+              format: double
+              example: 3200
+            limit:
+              type: number
+              format: double
+              example: 5000
+            remaining:
+              type: number
+              format: double
+              example: 1800
+            progressPercentage:
+              type: integer
+              example: 64
+          required:
+            - spent
+            - limit
+            - remaining
+            - progressPercentage
+      required:
+        - userName
+        - currency
+        - period
+        - summary
+        - monthlyBudget
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Invalid email or password
+      required:
+        - message
+
+  responses:
+    BadRequest:
+      description: The server could not understand the request due to invalid syntax.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalServerError:
+      description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+tags:
+  - name: Authentication
+    description: User registration and login endpoints
+  - name: Dashboard
+    description: Financial overview endpoints
