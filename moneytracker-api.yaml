@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: MoneyTracker API
-  version: 1.0.0
-  description: Authentication and dashboard APIs for MoneyTracker
+  version: 2.0.0
+  description: Authentication, dashboard, transactions, categories, and AI scan APIs for MoneyTracker
 
 servers:
   - description: SwaggerHub/API Auto Mocking
@@ -87,6 +87,263 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DashboardSummaryResponse"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /transactions:
+    post:
+      operationId: createTransaction
+      summary: Create a new transaction
+      tags:
+        - Transactions
+      description: Creates a new income or expense transaction.
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionRequest"
+      responses:
+        "201":
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    get:
+      operationId: listTransactions
+      summary: Get transactions
+      tags:
+        - Transactions
+      description: Returns a list of transactions, optionally filtered by type, category, or period.
+      security:
+        - BearerJwt: []
+      parameters:
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [income, expense]
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: period
+          required: false
+          description: Reporting period in YYYY-MM format
+          schema:
+            type: string
+            example: 2026-03
+      responses:
+        "200":
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /transactions/{transactionId}:
+    put:
+      operationId: updateTransaction
+      summary: Update a transaction
+      tags:
+        - Transactions
+      description: Updates an existing income or expense transaction.
+      security:
+        - BearerJwt: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: Unique transaction identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionRequest"
+      responses:
+        "200":
+          description: Transaction updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    delete:
+      operationId: deleteTransaction
+      summary: Delete a transaction
+      tags:
+        - Transactions
+      description: Deletes an existing income or expense transaction.
+      security:
+        - BearerJwt: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: Unique transaction identifier
+      responses:
+        "200":
+          description: Transaction deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteSuccessResponse"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /categories:
+    get:
+      operationId: getCategories
+      summary: Get transaction categories
+      tags:
+        - Categories
+      description: Returns available categories for income and expense transactions.
+      security:
+        - BearerJwt: []
+      parameters:
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [income, expense]
+      responses:
+        "200":
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryListResponse"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /scan/receipt:
+    post:
+      operationId: scanReceipt
+      summary: Scan a receipt or invoice
+      tags:
+        - AI Scan
+      description: Uploads a receipt or invoice image and returns extracted fields for user review. Data is not saved at this stage.
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ReceiptScanRequest"
+      responses:
+        "200":
+          description: Receipt scanned successfully and extracted data returned for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptScanResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Unauthorized. Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /transactions/confirm:
+    post:
+      operationId: confirmScannedTransaction
+      summary: Confirm and save scanned transaction
+      tags:
+        - AI Scan
+      description: Saves a scanned receipt or invoice as a transaction only after the user confirms the reviewed data.
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmScannedTransactionRequest"
+      responses:
+        "201":
+          description: Confirmed scanned transaction saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           description: Unauthorized. Missing or invalid JWT token.
           content:
@@ -225,6 +482,240 @@ components:
         - summary
         - monthlyBudget
 
+    CreateTransactionRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+          example: income
+        amount:
+          type: number
+          format: double
+          example: 5000
+        currency:
+          type: string
+          example: EUR
+        category:
+          type: string
+          example: Salary
+        description:
+          type: string
+          example: Monthly salary
+        date:
+          type: string
+          format: date
+          example: 2026-03-10
+      required:
+        - type
+        - amount
+        - category
+        - date
+
+    UpdateTransactionRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+          example: expense
+        amount:
+          type: number
+          format: double
+          example: 45.5
+        currency:
+          type: string
+          example: EUR
+        category:
+          type: string
+          example: Food
+        description:
+          type: string
+          example: Grocery shopping
+        date:
+          type: string
+          format: date
+          example: 2026-03-10
+      required:
+        - type
+        - amount
+        - category
+        - date
+
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: tx_001
+        type:
+          type: string
+          enum: [income, expense]
+          example: income
+        amount:
+          type: number
+          format: double
+          example: 5000
+        currency:
+          type: string
+          example: EUR
+        category:
+          type: string
+          example: Salary
+        description:
+          type: string
+          example: Monthly salary
+        date:
+          type: string
+          format: date
+          example: 2026-03-10
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-03-10T10:30:00Z
+      required:
+        - id
+        - type
+        - amount
+        - category
+        - date
+
+    TransactionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionResponse"
+        total:
+          type: integer
+          example: 2
+      required:
+        - items
+        - total
+
+    DeleteSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Transaction deleted successfully
+      required:
+        - message
+
+    CategoryItem:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+          example: income
+        name:
+          type: string
+          example: Salary
+      required:
+        - type
+        - name
+
+    CategoryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryItem"
+      required:
+        - items
+
+    ReceiptScanRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        documentType:
+          type: string
+          enum: [receipt, invoice]
+          example: receipt
+      required:
+        - file
+
+    ReceiptScanResponse:
+      type: object
+      properties:
+        scanId:
+          type: string
+          example: scan_001
+        type:
+          type: string
+          enum: [income, expense]
+          example: expense
+        amount:
+          type: number
+          format: double
+          example: 23.5
+        currency:
+          type: string
+          example: EUR
+        category:
+          type: string
+          example: Food
+        merchant:
+          type: string
+          example: Lidl
+        description:
+          type: string
+          example: Grocery purchase
+        date:
+          type: string
+          format: date
+          example: 2026-03-10
+        confidence:
+          type: integer
+          example: 92
+      required:
+        - scanId
+        - amount
+        - category
+        - date
+
+    ConfirmScannedTransactionRequest:
+      type: object
+      properties:
+        scanId:
+          type: string
+          example: scan_001
+        type:
+          type: string
+          enum: [income, expense]
+          example: expense
+        amount:
+          type: number
+          format: double
+          example: 23.5
+        currency:
+          type: string
+          example: EUR
+        category:
+          type: string
+          example: Food
+        merchant:
+          type: string
+          example: Lidl
+        description:
+          type: string
+          example: Grocery purchase
+        date:
+          type: string
+          format: date
+          example: 2026-03-10
+      required:
+        - scanId
+        - type
+        - amount
+        - category
+        - date
+
     ErrorResponse:
       type: object
       properties:
@@ -254,3 +745,9 @@ tags:
     description: User registration and login endpoints
   - name: Dashboard
     description: Financial overview endpoints
+  - name: Transactions
+    description: Create, list, update, and delete income and expense transactions
+  - name: Categories
+    description: Transaction category endpoints
+  - name: AI Scan
+    description: AI-assisted receipt and invoice scanning endpoints
