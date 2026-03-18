@@ -492,15 +492,20 @@ components:
         amount:
           type: number
           format: double
+          minimum: 0.01
           example: 5000
         currency:
           type: string
+          pattern: "^[A-Z]{3}$"
           example: EUR
         category:
           type: string
+          minLength: 2
+          maxLength: 50
           example: Salary
         description:
           type: string
+          maxLength: 200
           example: Monthly salary
         date:
           type: string
@@ -522,15 +527,18 @@ components:
         amount:
           type: number
           format: double
+          minimum: 0.01
           example: 45.5
         currency:
           type: string
+          pattern: "^[A-Z]{3}$"
           example: EUR
         category:
           type: string
           example: Food
         description:
           type: string
+          maxLength: 200
           example: Grocery shopping
         date:
           type: string
