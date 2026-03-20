@@ -88,11 +88,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummaryResponse"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -121,11 +117,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -165,11 +157,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TransactionListResponse"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -205,11 +193,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: Transaction not found
           content:
@@ -242,11 +226,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DeleteSuccessResponse"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: Transaction not found
           content:
@@ -280,11 +260,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CategoryListResponse"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -294,7 +270,7 @@ paths:
       summary: Scan a receipt or invoice
       tags:
         - AI Scan
-      description: Uploads a receipt or invoice image and returns extracted fields for user review. Data is not saved at this stage.
+      description: Uploads a receipt or invoice image and returns AI-extracted fields for user review. Data must be confirmed or corrected by the user before saving.
       security:
         - BearerJwt: []
       requestBody:
@@ -313,11 +289,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -346,11 +318,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Unauthorized. Missing or invalid JWT token.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -649,6 +617,116 @@ components:
       required:
         - items
 
+    ReceiptScanResponse:
+      type: object
+      description: |
+        AI scan result. Fields may be null or missing depending on extraction success.
+        When status = failed, no reliable fields should be used.
+      properties:
+        scanId:
+          type: string
+          example: scan_001
+
+        status:
+          type: string
+          enum: [success, partial, failed]
+          description: |
+            success = key fields extracted
+            partial = some fields missing or low confidence
+            failed = no usable data extracted
+          example: partial
+
+        detectedFields:
+          type: array
+          items:
+            type: string
+            enum: [amount, date, merchant, currency, category]
+          example: ["amount", "date", "merchant"]
+
+        suggestedType:
+          type: string
+          enum: [income, expense]
+          example: expense
+          description: AI suggestion only. User must confirm or change before saving.
+
+        amount:
+          type: number
+          format: double
+          nullable: true
+          example: 23.5
+
+        amountCandidates:
+          type: array
+          description: Alternative detected amounts sorted by confidence (highest first)
+          items:
+            type: number
+          example: [20.0, 3.0, 23.0]
+
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          nullable: true
+          example: EUR
+
+        merchant:
+          type: string
+          nullable: true
+          example: Lidl
+
+        suggestedCategory:
+          type: string
+          description: AI-suggested category name. Must match one of the available categories from /categories API. User must confirm or replace before sending as "category".
+          example: Food
+
+        description:
+          type: string
+          nullable: true
+          example: Grocery purchase
+
+        date:
+          type: string
+          format: date
+          nullable: true
+          example: 2026-03-10
+
+        confidence:
+          type: object
+          nullable: true
+          description: Confidence scores for extracted fields (0 to 1). Only present for detected fields. May be null if extraction fails.
+          properties:
+            amount:
+              type: number
+              minimum: 0
+              maximum: 1
+              example: 0.95
+            date:
+              type: number
+              minimum: 0
+              maximum: 1
+              example: 0.8
+            merchant:
+              type: number
+              minimum: 0
+              maximum: 1
+              example: 0.7
+
+        rawText:
+          type: string
+          example: "LIDL TOTAL 23.50 EUR 19/03/2026"
+
+      required:
+        - scanId
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Invalid request
+      required:
+        - message
+
     ReceiptScanRequest:
       type: object
       properties:
@@ -657,108 +735,37 @@ components:
           format: binary
         documentType:
           type: string
+          description: Helps AI adjust extraction logic (e.g., invoices may contain company names and totals).
           enum: [receipt, invoice]
-          example: receipt
       required:
         - file
 
-    ReceiptScanResponse:
-      type: object
-      properties:
-        scanId:
-          type: string
-          example: scan_001
-        type:
-          type: string
-          enum: [income, expense]
-          example: expense
-        amount:
-          type: number
-          format: double
-          example: 23.5
-        currency:
-          type: string
-          pattern: "^[A-Z]{3}$"
-          example: EUR
-        category:
-          type: string
-          minLength: 2
-          maxLength: 50
-          example: Food
-        merchant:
-          type: string
-          minLength: 2
-          maxLength: 100
-          example: Lidl
-        description:
-          type: string
-          example: Grocery purchase
-        date:
-          type: string
-          format: date
-          example: 2026-03-10
-        confidence:
-          type: integer
-          minimum: 0
-          maximum: 100
-          example: 92
-      required:
-        - scanId
-        - amount
-        - category
-        - date
-
     ConfirmScannedTransactionRequest:
+      description: User-confirmed transaction data after reviewing AI-extracted fields.
       type: object
       properties:
         scanId:
           type: string
-          example: scan_001
         type:
           type: string
           enum: [income, expense]
-          example: expense
         amount:
           type: number
-          minimum: 0.01
-          format: double
-          example: 23.5
         currency:
           type: string
-          pattern: "^[A-Z]{3}$"
-          example: EUR
         category:
           type: string
-          minLength: 2
-          maxLength: 50
-          example: Food
-        merchant:
-          type: string
-          minLength: 2
-          maxLength: 100
-          example: Lidl
         description:
           type: string
-          example: Grocery purchase
         date:
           type: string
           format: date
-          example: 2026-03-10
       required:
         - scanId
         - type
         - amount
         - category
         - date
-
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Invalid email or password
-      required:
-        - message
 
   responses:
     BadRequest:
@@ -770,6 +777,12 @@ components:
 
     InternalServerError:
       description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Unauthorized. Missing or invalid JWT token.
       content:
         application/json:
           schema:
