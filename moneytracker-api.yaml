@@ -631,8 +631,8 @@ components:
           type: string
           enum: [success, partial, failed]
           description: |
-            success = key fields extracted
-            partial = some fields missing or low confidence
+            success = key fields extracted with high confidence
+            partial = fields may exist but some have low confidence or may be missing
             failed = no usable data extracted
           example: partial
 
@@ -657,7 +657,7 @@ components:
 
         amountCandidates:
           type: array
-          description: Alternative detected amounts sorted by confidence (highest first)
+          description: Alternative detected amounts including the selected amount. Sorted by confidence (highest first).
           items:
             type: number
           example: [20.0, 3.0, 23.0]
@@ -675,7 +675,7 @@ components:
 
         suggestedCategory:
           type: string
-          description: AI-suggested category name. Must match one of the available categories from /categories API. User must confirm or replace before sending as "category".
+          description: AI-suggested category name. Frontend should validate against /categories API and allow user to correct if no match is found.
           example: Food
 
         description:
