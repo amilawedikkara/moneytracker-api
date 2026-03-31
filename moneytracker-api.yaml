@@ -242,13 +242,24 @@ paths:
       summary: Get transaction categories
       tags:
         - Categories
-      description: Returns available categories for income and expense transactions.
+      description: |
+        Returns available categories for income and expense transactions.
+
+        Frontend usage:
+        - Call /categories?type=income or /categories?type=expense
+        - Render each item.name as a selectable option
+        - When user selects a category, store item.name
+        - When creating/updating a transaction, send the same value as category
+
+        Important:
+        - Frontend must NOT hardcode categories
+        - Frontend must NOT use index/position as category
       security:
         - BearerJwt: []
       parameters:
         - in: query
           name: type
-          required: false
+          required: true
           schema:
             type: string
             enum: [income, expense]
@@ -595,23 +606,30 @@ components:
 
     CategoryItem:
       type: object
+      description: A single selectable category option returned by the API. Frontend must display name and send the same value in transactions.category.
       properties:
         type:
           type: string
           enum: [income, expense]
           example: income
+          description: Defines whether the category belongs to income or expense.
         name:
           type: string
+          minLength: 2
+          maxLength: 50
           example: Salary
+          description: Display name shown in UI and must be sent back as category in /transactions.
       required:
         - type
         - name
 
     CategoryListResponse:
       type: object
+      description: List of available categories. Used by frontend to render selectable category options.
       properties:
         items:
           type: array
+          description: List of category options.
           items:
             $ref: "#/components/schemas/CategoryItem"
       required:
